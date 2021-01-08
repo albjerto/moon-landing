@@ -15,21 +15,29 @@ def set_seed(seed, env):
 
 
 class ReplayMemory:
-    def __init__(self, capacity):
-        self.capacity = capacity
+    def __init__(self, max_length, device):
+        self.max_length = max_length
         self.buffer = []
         self.times_pushed = 0
+        self.device = device
 
     def push(self, item):
-        if len(self.buffer) < self.capacity:
+        if len(self.buffer) < self.max_length:
             self.buffer.append(item)
         else:
-            self.buffer[self.times_pushed % self.capacity] = item
+            self.buffer[self.times_pushed % self.max_length] = item
 
         self.times_pushed += 1
 
     def sample(self, batch_size):
-        return random.sample(self.buffer, batch_size)
+        batch = Experience(*zip(*random.sample(self.buffer, batch_size)))
+
+        states = torch.stack(batch.state).to(self.device)
+        next_states = torch.stack(batch.new_state).to(self.device)
+        actions = torch.LongTensor(batch.action).reshape(-1, 1).to(self.device)
+        rewards = torch.FloatTensor(batch.reward).reshape(-1, 1).to(self.device)
+        dones = torch.FloatTensor(batch.done).reshape(-1, 1).to(self.device)
+        return states, next_states, actions, rewards, dones
 
     def can_sample(self, batch_size):
         return len(self.buffer) >= batch_size
@@ -45,6 +53,9 @@ class EnvWrapper:
 
         self.state = None
         self.device = device
+        self.unwrapped = env
+        self.state_dim = env.observation_space.shape
+        self.action_dim = env.action_space.n
 
     def process_state(self, state):
         return torch.tensor(state, dtype=torch.float, device=self.device)

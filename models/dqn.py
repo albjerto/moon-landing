@@ -17,4 +17,7 @@ class DQN(nn.Module):
         return self.out(x)
 
     def save(self, filename):
-        torch.save(self, filename)
+        torch.save(self.state_dict(), filename)
+
+    def load(self, filename):
+        self.load_state_dict(torch.load(filename))

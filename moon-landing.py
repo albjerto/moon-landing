@@ -1,133 +1,155 @@
+import argparse
 import torch
 import gym
-from agent import Agent
+from agents import DQNAgent, DoubleDQNAgent
 from utils import EnvWrapper, set_seed
-import numpy as np
 import os
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-env = gym.make("LunarLander-v2")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model',
+                        choices=['dqn', 'double_dqn'],
+                        default='dqn',
+                        type=str,
+                        help='Model to be used, between dqn and double_dqn')
 
-seed = 18
+    arg_group = parser.add_mutually_exclusive_group(required=True)
+    arg_group.add_argument('-t',
+                           '--train',
+                           action='store_true',
+                           help='if present, train the chosen agent; if not, test it')
+    arg_group.add_argument('-f',
+                           '--file',
+                           type=str,
+                           default=None,
+                           help='use the weights stored in the given file. Required if in testing mode')
 
-set_seed(seed, env)
+    parser.add_argument('-v',
+                        '--verbose',
+                        choices=[0, 1, 2, 3],
+                        default=2,
+                        type=int,
+                        help="Verbose mode. One between 0 (no plots, no logs, no video), "
+                             "1 (yes plots, no logs, no video), 2 (yes plots, yes logs, no video), "
+                             "3 (yes to all). Considered only in training mode")
 
-# num_frames = 75000
-memory_size = int(1e5)
-batch_size = 64
-target_update = 100
-# decay_rate = 1 / 50000      # for linear
-decay_rate = 0.99         # for power law
-# decay_rate = 0.001            # for exponential
-max_eps = 1.
-min_eps = .01
-gamma = .99
-lr = .001
-plot_freq = 200
-winning_score = 200
-avg_period = 150
-episodes = 1000
-max_t = 1000
-test_episodes = 100
+    parser.add_argument('-b',
+                        '--batch_size',
+                        type=int,
+                        default=64,
+                        help='size of the batch used to perform training (default: 64)')
 
+    parser.add_argument('-m',
+                        '--memory-size',
+                        type=int,
+                        default=int(1e5),
+                        help='maximum size of the replay memory buffer (default: 100000)')
 
-if not os.path.exists('./solved'):
-    os.mkdir('./solved')
+    parser.add_argument('--gamma',
+                        type=float,
+                        default=0.99,
+                        help='discount rate for the q-values update (default: 0.99)')
 
-if not os.path.exists('./plots'):
-    os.mkdir('./plots')
+    parser.add_argument('--lr',
+                        type=float,
+                        default=.001,
+                        help='learning rate (default: 0.001)')
 
+    parser.add_argument('--episodes',
+                        type=int,
+                        default=2000,
+                        help='Number of episodes to perform training on. Considered only if in training mode.')
 
-agent = Agent(env.observation_space.shape[0],
-              env.action_space.n,
-              lr,
-              gamma,
-              memory_size,
-              batch_size,
-              max_eps,
-              min_eps,
-              decay_rate,
-              device,
-              decay_type="power_law")
+    args = parser.parse_args()
+    hyper_params = {
+        'model': args.model,
+        'max_timesteps': 1000,
+        'target_sync_freq': 100,
+        'learn_freq': 4,
+        'gamma': args.gamma,
+        'lr': args.lr,
+        'num_episodes': args.episodes,
+        'batch_size': args.batch_size,
+        'memory_size': args.memory_size,
+        'verbose': args.verbose,
+        'max_eps': 1.0,
+        'min_eps': 0.01,
+        'decay_rate': 0.99,
+        'decay_type': 'power_law',
+        'weights_file': args.file
+    }
 
-epsilons = []
-losses = []
-scores = []
-score = 0
-updates = 0
-env_wrapper = EnvWrapper(env, device)
+    print("Chosen parameters:\n")
+    for key in hyper_params:
+        print("{}: {}".format(key, hyper_params[key]))
+    print("\n")
 
-for ep in range(1, episodes + 1):
-    state = env_wrapper.reset()
-    score = 0
-    for t in range(1, max_t + 1):
-        # env_wrapper.render()
-        action = agent.choose_action(state)
-        next_state, reward, done = env_wrapper.step(action)
-        agent.remember(state, action, reward, next_state, done)
-        score += reward
-        state = next_state
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        if agent.can_sample_from_mem():
-            loss = agent.update()
-            losses.append(loss)
-            updates += 1
+    solved_dir = './solved/'
+    plots_dir = './plots/'
 
-            if updates % target_update == 0:
-                agent.target_hard_update()
+    if not os.path.exists(solved_dir):
+        os.mkdir(solved_dir)
 
-        if done:
-            agent.update_eps()
-            break
+    if not os.path.exists(plots_dir):
+        os.mkdir(plots_dir)
 
-    scores.append(score)
-    epsilons.append(agent.curr_eps)
-    print("\n****************************\n"
-          "Episode {} finished. Score: {}. Current exploration rate: {}\n"
-          "****************************\n".format(ep, score, agent.curr_eps))
-    if ep % plot_freq == 0:
-        agent.plot(scores,
-                   avg_period,
-                   winning_score,
-                   losses,
-                   epsilons,
-                   filename="./plots/DQN_checkpoint_" + str((ep / plot_freq) + 1) + '.png')
+    env = gym.make("LunarLander-v2")
+    seed = 18
+    set_seed(seed, env)
 
-    avg_reward = np.mean(scores[-avg_period:])
-    if avg_reward >= winning_score:
-        print("\n\n\nEnvironment solved after {} episodes, with an avg reward of {}. Highest reward was {}.\n"
-              .format(ep, avg_reward, np.max(scores)))
-        agent.policy_net.save('./solved/DQN_policy_net.pth')
-        break
+    env_wrapper = EnvWrapper(env, device)
 
-agent.plot(scores, avg_period, winning_score, losses, epsilons, filename='./plots/DQN_final.png')
+    if args.model == 'dqn':
+        agent = DQNAgent(env_wrapper.state_dim[0],
+                         env_wrapper.action_dim,
+                         hyper_params['lr'],
+                         hyper_params['gamma'],
+                         hyper_params['memory_size'],
+                         hyper_params['batch_size'],
+                         hyper_params['max_eps'],
+                         hyper_params['min_eps'],
+                         hyper_params['decay_rate'],
+                         device,
+                         decay_type=hyper_params['decay_type'])
 
-# qs_history = np.array([np.array(x)
-# for x in agent.q_table_history if agent.q_table_history.index(x) not in (5, 7, 11, 12)], dtype=object)
-#
-# for qs in qs_history:
-#     _, ax = plt.subplots(nrows=1, ncols=4)
-#     for i in range(len(ax)):
-#         ax[i].plot(qs[:, i])
-#     plt.show()
+    else:
+        agent = DoubleDQNAgent(env_wrapper.state_dim[0],
+                               env_wrapper.action_dim,
+                               hyper_params['lr'],
+                               hyper_params['gamma'],
+                               hyper_params['memory_size'],
+                               hyper_params['batch_size'],
+                               hyper_params['max_eps'],
+                               hyper_params['min_eps'],
+                               hyper_params['decay_rate'],
+                               device,
+                               decay_type=hyper_params['decay_type'])
+    if args.train:
+        paths = {
+            'solved_dir': solved_dir,
+            'plot_dir': plots_dir
+        }
 
+        agent.train(env_wrapper,
+                    paths,
+                    num_episodes=hyper_params['num_episodes'],
+                    max_t=hyper_params['max_timesteps'],
+                    learn_every=hyper_params['learn_freq'],
+                    target_update=hyper_params['target_sync_freq'],
+                    verbose=hyper_params['verbose'],
+                    avg_period=150,
+                    winning_score=200)
+    else:
+        paths = {
+            'weights': hyper_params['weights_file'],
+            'plot_dir': plots_dir
+        }
 
-scores = []
-print("TESTING")
-for episode in range(1, test_episodes + 1):
-    done = False
-    state = env_wrapper.reset()
-    score = 0
-    t = 0
-    while not done and t < max_t:
-        env_wrapper.render()
-        action = agent.choose_action(state, testing=True)
-        new_state, reward, done = env_wrapper.step(action)
-        score += reward
-        state = new_state
-        t += 1
-    scores.append(score)
-
-    print("Testing episode {} finished\n".format(episode))
-
-print(scores)
+        agent.test(env_wrapper,
+                   paths,
+                   render=True,
+                   num_episodes=100,
+                   max_t=1000,
+                   winning_score=200)
