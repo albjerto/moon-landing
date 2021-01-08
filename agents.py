@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from models.dqn import DQN
+from models import DQN, DuelingDQN
 import torch.optim as optim
 import torch.nn.functional as F
 import math
@@ -144,6 +144,8 @@ class DQNAgent(BaseAgent):
                  eps_end,
                  eps_decay,
                  device,
+                 linear1_units=64,
+                 linear2_units=64,
                  decay_type="linear"):
 
         super().__init__(max_memory_size,
@@ -158,8 +160,8 @@ class DQNAgent(BaseAgent):
 
         # networks
         self.output_dim = output_dim
-        self.policy_net = DQN(input_dim, output_dim).to(device)
-        self.target_net = DQN(input_dim, output_dim).to(device)
+        self.policy_net = DQN(input_dim, output_dim, linear1_units, linear2_units).to(device)
+        self.target_net = DQN(input_dim, output_dim, linear1_units, linear2_units).to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
@@ -215,7 +217,8 @@ class DQNAgent(BaseAgent):
         epsilons = []
         updates = 0
         plot_freq = 200
-        last_victory = winning_score
+
+        self.policy_net.train()
 
         for ep in range(1, num_episodes + 1):
             state = env.reset()
@@ -257,7 +260,7 @@ class DQNAgent(BaseAgent):
                           epsilons)
 
             avg_reward = np.mean(scores[-avg_period:])
-            if avg_reward > last_victory:
+            if avg_reward > winning_score:
                 curr_time = datetime.now().strftime("%Y%m%d_%H%M")
                 if verbose > 1:
                     print("\n\nEnvironment solved after {} episodes, with an avg reward of {}. Highest reward was {}.\n"
@@ -289,6 +292,8 @@ class DQNAgent(BaseAgent):
         except FileNotFoundError:
             print("File not found.")
             exit(1)
+
+        self.policy_net.eval()
 
         test_scores = []
         print("TESTING")
@@ -331,6 +336,8 @@ class DoubleDQNAgent(DQNAgent):
                  eps_end,
                  eps_decay,
                  device,
+                 linear1_units=64,
+                 linear2_units=64,
                  decay_type="linear"):
 
         super().__init__(input_dim,
@@ -343,6 +350,8 @@ class DoubleDQNAgent(DQNAgent):
                          eps_end,
                          eps_decay,
                          device,
+                         linear1_units,
+                         linear2_units,
                          decay_type)
 
         self.model_name = "DoubleDQN"
@@ -365,3 +374,40 @@ class DoubleDQNAgent(DQNAgent):
         # for param in self.policy_net.parameters():
         #    param.grad.data.clamp_(-1, 1)
         return loss.item()
+
+
+class DuelingDQNAgent(DQNAgent):
+    def __init__(self,
+                 input_dim,
+                 output_dim,
+                 lr,
+                 gamma,
+                 max_memory_size,
+                 batch_size,
+                 eps_start,
+                 eps_end,
+                 eps_decay,
+                 device,
+                 linear_units=64,
+                 advantage_units=32,
+                 value_units=32,
+                 decay_type="linear"):
+
+        super().__init__(input_dim,
+                         output_dim,
+                         lr,
+                         gamma,
+                         max_memory_size,
+                         batch_size,
+                         eps_start,
+                         eps_end,
+                         eps_decay,
+                         device,
+                         decay_type=decay_type)
+
+        self.model_name = "DuelingDQN"
+
+        self.policy_net = DuelingDQN(input_dim, output_dim, linear_units, advantage_units, value_units).to(device)
+        self.target_net = DuelingDQN(input_dim, output_dim, linear_units, advantage_units, value_units).to(device)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net.eval()
