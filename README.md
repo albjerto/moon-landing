@@ -29,7 +29,7 @@ pip3 install -r requirements.txt
 ```
 
 ## Project structure ##
-- [moon-landing.py](#Moon-landing-py)
+- [moon-landing.py](#moon-landingpy)
 - [agents.py](#agents)
 - [models.py](#models)
 - [utils.py](#utils)
