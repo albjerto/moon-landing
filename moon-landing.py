@@ -1,17 +1,17 @@
 import argparse
 import torch
 import gym
-from agents import DQNAgent, DoubleDQNAgent
+from agents import DQNAgent, DoubleDQNAgent, DuelingDQNAgent
 from utils import EnvWrapper, set_seed
 import os
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',
-                        choices=['dqn', 'double_dqn'],
+                        choices=['dqn', 'double_dqn', 'dueling_dqn'],
                         default='dqn',
                         type=str,
-                        help='Model to be used, between dqn and double_dqn')
+                        help='Model to be used, between dqn, double_dqn and dueling_dqn')
 
     arg_group = parser.add_mutually_exclusive_group(required=True)
     arg_group.add_argument('-t',
@@ -75,6 +75,7 @@ if __name__ == "__main__":
         'max_eps': 1.0,
         'min_eps': 0.01,
         'decay_rate': 0.99,
+        # 'decay_rate': 0.998,
         'decay_type': 'power_law',
         'weights_file': args.file
     }
@@ -114,7 +115,7 @@ if __name__ == "__main__":
                          device,
                          decay_type=hyper_params['decay_type'])
 
-    else:
+    elif args.model == "double_dqn":
         agent = DoubleDQNAgent(env_wrapper.state_dim[0],
                                env_wrapper.action_dim,
                                hyper_params['lr'],
@@ -126,6 +127,20 @@ if __name__ == "__main__":
                                hyper_params['decay_rate'],
                                device,
                                decay_type=hyper_params['decay_type'])
+
+    else :      #  dueling_dqn
+        agent = DuelingDQNAgent(env_wrapper.state_dim[0],
+                                env_wrapper.action_dim,
+                                hyper_params['lr'],
+                                hyper_params['gamma'],
+                                hyper_params['memory_size'],
+                                hyper_params['batch_size'],
+                                hyper_params['max_eps'],
+                                hyper_params['min_eps'],
+                                hyper_params['decay_rate'],
+                                device,
+                                decay_type=hyper_params['decay_type'])
+
     if args.train:
         paths = {
             'solved_dir': solved_dir,
@@ -139,7 +154,7 @@ if __name__ == "__main__":
                     learn_every=hyper_params['learn_freq'],
                     target_update=hyper_params['target_sync_freq'],
                     verbose=hyper_params['verbose'],
-                    avg_period=150,
+                    avg_period=100,
                     winning_score=200)
     else:
         paths = {

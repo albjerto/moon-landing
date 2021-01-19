@@ -411,3 +411,22 @@ class DuelingDQNAgent(DQNAgent):
         self.target_net = DuelingDQN(input_dim, output_dim, linear_units, advantage_units, value_units).to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
+
+    def learn(self):
+        states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
+
+        curr_q_vals = self.policy_net(states).gather(1, actions)
+
+        with torch.no_grad():
+            max_next_q_vals_idx = self.policy_net(next_states).argmax(1)
+
+        next_q_vals = self.target_net(next_states).gather(1, max_next_q_vals_idx.unsqueeze(1)).detach()
+        target = (rewards + self.gamma * next_q_vals * (1 - dones)).to(self.device)
+        loss = F.smooth_l1_loss(curr_q_vals, target)
+        self.optim.zero_grad()
+        loss.backward()
+
+        self.optim.step()
+        # for param in self.policy_net.parameters():
+        #    param.grad.data.clamp_(-1, 1)
+        return loss.item()
