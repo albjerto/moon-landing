@@ -2,6 +2,8 @@
 This repository contains the code of the project for the module Autonomous and Adaptive Systems,
 held by Prof. [Mirco Musolesi](https://www.mircomusolesi.org/) at the University of Bologna.
 
+![agent perfomance after training](./img/test_performance.gif "Agent performance after training")
+
 ## Dependencies ##
 
 - Python 3.6+
@@ -66,22 +68,29 @@ python3 moon-landing.py -h
 displays a help message with all the customizable parameters and their syntax. 
 ```
 usage: moon-landing.py [-h] [--model {dqn,double_dqn,dueling_dqn}] (-t | -f FILE) [-v {0,1,2,3}] [-b BATCH_SIZE] [-m MEMORY_SIZE] [--gamma GAMMA] [--lr LR] [--episodes EPISODES]
+                       [--target-sync-freq TARGET_SYNC_FREQ] [--learn-freq LEARN_FREQ] [--decay DECAY]
 
 optional arguments:
   -h, --help            show this help message and exit
   --model {dqn,double_dqn,dueling_dqn}
-                        Model to be used, between dqn, double_dqn and dueling_dqn
+                        Model to be used. One between dqn, double_dqn and dueling_dqn (default: dqn)
   -t, --train           if present, train the chosen agent; if not, test it
   -f FILE, --file FILE  use the weights stored in the given file. Required if in testing mode
   -v {0,1,2,3}, --verbose {0,1,2,3}
                         Verbose mode. One between 0 (no plots, no logs, no video), 1 (yes plots, no logs, no video), 2 (yes plots, yes logs, no video), 3 (yes to all). Considered only in training mode
+                        (default: 2)
   -b BATCH_SIZE, --batch_size BATCH_SIZE
                         size of the batch used to perform training (default: 64)
   -m MEMORY_SIZE, --memory-size MEMORY_SIZE
                         maximum size of the replay memory buffer (default: 100000)
   --gamma GAMMA         discount rate for the q-values update (default: 0.99)
   --lr LR               learning rate (default: 0.001)
-  --episodes EPISODES   Number of episodes to perform training on. Considered only if in training mode.
+  --episodes EPISODES   Number of episodes to perform training on. Considered only if in training mode (default: 2000)
+  --target-sync-freq TARGET_SYNC_FREQ
+                        Number of updates before the network is clones for Q-targets (default:500)
+  --learn-freq LEARN_FREQ
+                        After how many steps the agent should update the weights (default: 4)
+  --decay DECAY         Espilon decay rule for power decay (default: 0.99)
 ```
 
 For example, to train a DQN agent, run

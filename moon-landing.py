@@ -12,7 +12,7 @@ def main():
                         choices=['dqn', 'double_dqn', 'dueling_dqn'],
                         default='dqn',
                         type=str,
-                        help='Model to be used, between dqn, double_dqn and dueling_dqn')
+                        help='Model to be used. One between dqn, double_dqn and dueling_dqn (default: dqn)')
 
     arg_group = parser.add_mutually_exclusive_group(required=True)
     arg_group.add_argument('-t',
@@ -32,7 +32,7 @@ def main():
                         type=int,
                         help="Verbose mode. One between 0 (no plots, no logs, no video), "
                              "1 (yes plots, no logs, no video), 2 (yes plots, yes logs, no video), "
-                             "3 (yes to all). Considered only in training mode")
+                             "3 (yes to all). Considered only in training mode (default: 2)")
 
     parser.add_argument('-b',
                         '--batch_size',
@@ -59,14 +59,30 @@ def main():
     parser.add_argument('--episodes',
                         type=int,
                         default=2000,
-                        help='Number of episodes to perform training on. Considered only if in training mode.')
+                        help='Number of episodes to perform training on.'
+                             ' Considered only if in training mode (default: 2000)')
+
+    parser.add_argument('--target-sync-freq',
+                        type=int,
+                        default=500,
+                        help='Number of updates before the network is clones for Q-targets (default:500)')
+
+    parser.add_argument('--learn-freq',
+                        type=int,
+                        default=4,
+                        help='After how many steps the agent should update the weights (default: 4)')
+    parser.add_argument('--decay',
+                        type=float,
+                        default=0.99,
+                        help='Espilon decay rule for power decay (default: 0.99)')
+
 
     args = parser.parse_args()
     hyper_params = {
         'model': args.model,
         'max_timesteps': 1000,
-        'target_sync_freq': 500,
-        'learn_freq': 4,
+        'target_sync_freq': args.target_sync_freq,
+        'learn_freq': args.learn_freq,
         'gamma': args.gamma,
         'lr': args.lr,
         'num_episodes': args.episodes,
@@ -75,7 +91,7 @@ def main():
         'verbose': args.verbose,
         'max_eps': 1.0,
         'min_eps': 0.01,
-        'decay_rate': 0.99,
+        'decay_rate': args.decay,
         # 'decay_rate': 0.998,
         'decay_type': 'power_law',
         'weights_file': args.file
