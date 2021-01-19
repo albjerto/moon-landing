@@ -64,7 +64,7 @@ if __name__ == "__main__":
     hyper_params = {
         'model': args.model,
         'max_timesteps': 1000,
-        'target_sync_freq': 100,
+        'target_sync_freq': 500,
         'learn_freq': 4,
         'gamma': args.gamma,
         'lr': args.lr,
@@ -113,6 +113,7 @@ if __name__ == "__main__":
                          hyper_params['min_eps'],
                          hyper_params['decay_rate'],
                          device,
+                         hyper_params['target_sync_freq'],
                          decay_type=hyper_params['decay_type'])
 
     elif args.model == "double_dqn":
@@ -126,6 +127,7 @@ if __name__ == "__main__":
                                hyper_params['min_eps'],
                                hyper_params['decay_rate'],
                                device,
+                               hyper_params['target_sync_freq'],
                                decay_type=hyper_params['decay_type'])
 
     else :      #  dueling_dqn
@@ -139,6 +141,7 @@ if __name__ == "__main__":
                                 hyper_params['min_eps'],
                                 hyper_params['decay_rate'],
                                 device,
+                                hyper_params['target_sync_freq'],
                                 decay_type=hyper_params['decay_type'])
 
     if args.train:
@@ -152,7 +155,6 @@ if __name__ == "__main__":
                     num_episodes=hyper_params['num_episodes'],
                     max_t=hyper_params['max_timesteps'],
                     learn_every=hyper_params['learn_freq'],
-                    target_update=hyper_params['target_sync_freq'],
                     verbose=hyper_params['verbose'],
                     avg_period=100,
                     winning_score=200)

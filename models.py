@@ -27,17 +27,22 @@ class DuelingDQN(nn.Module):
     def __init__(self, input_dim, output_dim, linear_units=128, advantage_units=128, value_units=128):
         super(DuelingDQN, self).__init__()
 
+        self.name = "DuelingDQN"
         self.linear = nn.Sequential(
             nn.Linear(input_dim, linear_units),
             nn.ReLU()
         )
 
         self.advantage = nn.Sequential(
-            nn.Linear(linear_units, output_dim)
+            nn.Linear(linear_units, advantage_units),
+            nn.ReLU(),
+            nn.Linear(advantage_units, output_dim)
         )
 
         self.value = nn.Sequential(
-            nn.Linear(linear_units, 1)
+            nn.Linear(linear_units, value_units),
+            nn.ReLU(),
+            nn.Linear(value_units, 1)
         )
         #
         # self.advantage = nn.Sequential(

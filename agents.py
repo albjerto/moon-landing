@@ -20,6 +20,8 @@ class BaseAgent:
                  device,
                  decay_type="linear"):
 
+        self.model_name = "Base"
+
         def linear(curr_eps):
             return max(
                 eps_end, curr_eps - ((
@@ -78,19 +80,27 @@ class BaseAgent:
         return self.memory.can_sample(self.batch_size)
 
     @abstractmethod
-    def train(self, *args):
-        pass
-
-    @abstractmethod
-    def test(self, *args):
-        pass
-
-    @abstractmethod
     def choose_action(self, state, testing=False):
         pass
 
     @abstractmethod
     def learn(self):
+        pass
+
+    @abstractmethod
+    def set_train(self):
+        pass
+
+    @abstractmethod
+    def set_test(self):
+        pass
+
+    @abstractmethod
+    def save(self, filename):
+        pass
+
+    @abstractmethod
+    def load(self, filename):
         pass
 
     @staticmethod
@@ -131,85 +141,14 @@ class BaseAgent:
 
         plt.close()
 
-
-class DQNAgent(BaseAgent):
-    def __init__(self,
-                 input_dim,
-                 output_dim,
-                 lr,
-                 gamma,
-                 max_memory_size,
-                 batch_size,
-                 eps_start,
-                 eps_end,
-                 eps_decay,
-                 device,
-                 linear1_units=64,
-                 linear2_units=64,
-                 decay_type="linear"):
-
-        super().__init__(max_memory_size,
-                         batch_size,
-                         eps_start,
-                         eps_end,
-                         eps_decay,
-                         device,
-                         decay_type)
-
-        self.model_name = "DQN"
-
-        # networks
-        self.output_dim = output_dim
-        self.policy_net = DQN(input_dim, output_dim, linear1_units, linear2_units).to(device)
-        self.target_net = DQN(input_dim, output_dim, linear1_units, linear2_units).to(device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
-
-        # optimizer
-        self.optim = optim.Adam(self.policy_net.parameters(), lr=lr)
-        self.gamma = gamma
-
-    def learn(self):
-        states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
-
-        curr_q_vals = self.policy_net(states).gather(1, actions)
-        next_q_vals = self.target_net(next_states).max(1, keepdim=True)[0].detach()
-        target = (rewards + self.gamma * next_q_vals * (1 - dones)).to(self.device)
-        loss = F.smooth_l1_loss(curr_q_vals, target)
-        self.optim.zero_grad()
-        loss.backward()
-
-        self.optim.step()
-        # for param in self.policy_net.parameters():
-        #    param.grad.data.clamp_(-1, 1)
-        return loss.item()
-
-    def target_hard_update(self):
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-
-    def target_soft_update(self, tau=0.001):
-        for target_param, policy_param in zip(self.target_net.parameters(), self.policy_net.parameters()):
-            target_param.data.copy_(tau * policy_param.data + (1.0 - tau) * target_param.data)
-
-    def choose_action(self, state, testing=False):
-        self.curr_step += 1
-
-        if not testing and np.random.random() < self.curr_eps:
-            return np.random.randint(0, self.output_dim)
-        else:
-            # we're using the network for inference only, we don't want to track the gradients in this case
-            with torch.no_grad():
-                return self.policy_net(state).argmax().item()
-
     def train(self,
               env,
               paths,
               num_episodes=2000,
               max_t=1000,
               learn_every=4,
-              target_update=100,
               verbose=2,
-              avg_period=150,
+              avg_period=100,
               winning_score=200):
 
         scores = []
@@ -218,7 +157,7 @@ class DQNAgent(BaseAgent):
         updates = 0
         plot_freq = 200
 
-        self.policy_net.train()
+        self.set_train()
 
         for ep in range(1, num_episodes + 1):
             state = env.reset()
@@ -237,9 +176,6 @@ class DQNAgent(BaseAgent):
                     loss = self.learn()
                     losses.append(loss)
                     updates += 1
-
-                    if updates % target_update == 0:
-                        self.target_hard_update()
 
                 if done:
                     self.update_eps()
@@ -266,7 +202,7 @@ class DQNAgent(BaseAgent):
                     print("\n\nEnvironment solved after {} episodes, with an avg reward of {}. Highest reward was {}.\n"
                           .format(ep, avg_reward, np.max(scores)))
 
-                self.policy_net.save(paths['solved_dir'] + self.model_name + '_solved_' + curr_time + '.pth')
+                self.save(paths['solved_dir'] + self.model_name + '_solved_' + curr_time + '.pth')
 
                 self.plot(scores,
                           avg_period,
@@ -288,12 +224,12 @@ class DQNAgent(BaseAgent):
              max_t=1000,
              winning_score=200):
         try:
-            self.policy_net.load(paths['weights'])
+            self.load(paths['weights'])
         except FileNotFoundError:
             print("File not found.")
             exit(1)
 
-        self.policy_net.eval()
+        self.set_train()
 
         test_scores = []
         print("TESTING")
@@ -324,6 +260,95 @@ class DQNAgent(BaseAgent):
         print("Testing finished.")
 
 
+class DQNAgent(BaseAgent):
+    def __init__(self,
+                 input_dim,
+                 output_dim,
+                 lr,
+                 gamma,
+                 max_memory_size,
+                 batch_size,
+                 eps_start,
+                 eps_end,
+                 eps_decay,
+                 device,
+                 target_update=100,
+                 linear1_units=64,
+                 linear2_units=64,
+                 decay_type="linear"):
+
+        super().__init__(max_memory_size,
+                         batch_size,
+                         eps_start,
+                         eps_end,
+                         eps_decay,
+                         device,
+                         decay_type)
+
+        self.model_name = "DQN"
+
+        self.target_update_freq = target_update
+        # networks
+        self.output_dim = output_dim
+        self.policy_net = DQN(input_dim, output_dim, linear1_units, linear2_units).to(device)
+        self.target_net = DQN(input_dim, output_dim, linear1_units, linear2_units).to(device)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net.eval()
+
+        # optimizer
+        self.optim = optim.Adam(self.policy_net.parameters(), lr=lr)
+        self.gamma = gamma
+        self.updated = 0
+
+    def learn(self):
+        states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
+
+        curr_q_vals = self.policy_net(states).gather(1, actions)
+        next_q_vals = self.target_net(next_states).max(1, keepdim=True)[0].detach()
+        target = (rewards + self.gamma * next_q_vals * (1 - dones)).to(self.device)
+        loss = F.smooth_l1_loss(curr_q_vals, target)
+        self.optim.zero_grad()
+        loss.backward()
+
+        self.optim.step()
+
+        self.updated += 1
+
+        if self.updated % self.target_update_freq == 0:
+            self.target_hard_update()
+
+        return loss.item()
+
+    def target_hard_update(self):
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+
+    def target_soft_update(self, tau=0.001):
+        for target_param, policy_param in zip(self.target_net.parameters(), self.policy_net.parameters()):
+            target_param.data.copy_(tau * policy_param.data + (1.0 - tau) * target_param.data)
+
+    def choose_action(self, state, testing=False):
+        self.curr_step += 1
+
+        if not testing and np.random.random() < self.curr_eps:
+            return np.random.randint(0, self.output_dim)
+        else:
+            # we're using the network for inference only, we don't want to track the gradients in this case
+            with torch.no_grad():
+                return self.policy_net(state).argmax().item()
+
+    def set_test(self):
+        self.policy_net.test()
+
+    def set_train(self):
+        self.policy_net.eval()
+
+    def save(self, filename):
+        self.policy_net.save(filename)
+
+    def load(self, filename):
+        self.policy_net.load(filename)
+
+
 class DoubleDQNAgent(DQNAgent):
     def __init__(self,
                  input_dim,
@@ -336,6 +361,7 @@ class DoubleDQNAgent(DQNAgent):
                  eps_end,
                  eps_decay,
                  device,
+                 target_update=100,
                  linear1_units=64,
                  linear2_units=64,
                  decay_type="linear"):
@@ -350,6 +376,7 @@ class DoubleDQNAgent(DQNAgent):
                          eps_end,
                          eps_decay,
                          device,
+                         target_update,
                          linear1_units,
                          linear2_units,
                          decay_type)
@@ -371,12 +398,16 @@ class DoubleDQNAgent(DQNAgent):
         loss.backward()
 
         self.optim.step()
+        self.updated += 1
+
+        if self.updated % self.target_update_freq == 0:
+            self.target_hard_update()
         # for param in self.policy_net.parameters():
         #    param.grad.data.clamp_(-1, 1)
         return loss.item()
 
 
-class DuelingDQNAgent(DQNAgent):
+class DuelingDQNAgent(BaseAgent):
     def __init__(self,
                  input_dim,
                  output_dim,
@@ -388,16 +419,13 @@ class DuelingDQNAgent(DQNAgent):
                  eps_end,
                  eps_decay,
                  device,
+                 target_update,
                  linear_units=64,
                  advantage_units=32,
                  value_units=32,
                  decay_type="linear"):
 
-        super().__init__(input_dim,
-                         output_dim,
-                         lr,
-                         gamma,
-                         max_memory_size,
+        super().__init__(max_memory_size,
                          batch_size,
                          eps_start,
                          eps_end,
@@ -405,12 +433,20 @@ class DuelingDQNAgent(DQNAgent):
                          device,
                          decay_type=decay_type)
 
-        self.model_name = "DuelingDQN"
+        self.output_dim = output_dim
 
         self.policy_net = DuelingDQN(input_dim, output_dim, linear_units, advantage_units, value_units).to(device)
         self.target_net = DuelingDQN(input_dim, output_dim, linear_units, advantage_units, value_units).to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
+
+        self.optim = optim.Adam(self.policy_net.parameters(), lr=lr)
+        self.gamma = gamma
+
+        self.updated = 0
+        self.model_name = self.policy_net.name
+
+        self.target_update_freq = target_update
 
     def learn(self):
         states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
@@ -427,6 +463,33 @@ class DuelingDQNAgent(DQNAgent):
         loss.backward()
 
         self.optim.step()
+        self.updated += 1
+
+        if self.updated % self.target_update_freq == 0:
+            self.target_hard_update()
         # for param in self.policy_net.parameters():
         #    param.grad.data.clamp_(-1, 1)
         return loss.item()
+
+    def save(self, filename):
+        self.policy_net.save(filename)
+
+    def load(self, filename):
+        self.policy_net.load(filename)
+
+    def choose_action(self, state, testing=False):
+        self.curr_step += 1
+        if not testing and np.random.random() < self.curr_eps:
+            return np.random.randint(0, self.output_dim)
+        else:
+            with torch.no_grad():
+                return self.policy_net(state).argmax().item()
+
+    def set_train(self):
+        self.policy_net.train()
+
+    def set_test(self):
+        self.policy_net.eval()
+
+    def target_hard_update(self):
+        self.target_net.load_state_dict(self.policy_net.state_dict())
