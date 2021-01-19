@@ -5,7 +5,8 @@ from agents import DQNAgent, DoubleDQNAgent, DuelingDQNAgent
 from utils import EnvWrapper, set_seed
 import os
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',
                         choices=['dqn', 'double_dqn', 'dueling_dqn'],
@@ -170,3 +171,7 @@ if __name__ == "__main__":
                    num_episodes=100,
                    max_t=1000,
                    winning_score=200)
+
+
+if __name__ == "__main__":
+    main()

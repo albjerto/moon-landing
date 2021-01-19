@@ -29,12 +29,34 @@ pip3 install -r requirements.txt
 ```
 
 ## Project structure ##
-- [moon-landing.py](#moon-landingpy)
-- [agents.py](#agents)
-- [models.py](#models)
-- [utils.py](#utils)
+- [./solved/](#usage)
+- [./moon-landing.py](#moon-landingpy)
+- [./agents.py](#agents)
+- [./models.py](#models)
+- [./utils.py](#utilspy)
 
 ### Moon-landing.py ###
+This file contains the main function, which creates the agents and launches them.
+
+### Agents ###
+The agents are implemented in the `agents.py` file. The available agents are:
+- DQNAgent
+- DoubleDQNAgent
+- DuelingDQNAgent
+
+All the agents implement a `BaseAgent`, which contains the basic functions common to all of them. DoubleDQNAgent also extends DQNAgent.
+
+Note that the DQNAgent implements the DQN algorithm with a different neural network, called _target network_, for the computation of the Q targets in the Q-learning update, as seen in the paper "Human Level Control Through Deep Reinforcement Learning".
+
+### Models ###
+The available models are implemented in the `models.py`:
+- DQN
+- Dueling DQN
+
+### utils.py ###
+This file contains utility functions and classes:
+- Replay Memory, used to store experiences of the form `e = (state, action, reward, new_state, done)`
+- Environment Wrapper, which handles the conversions between numpy arrays and torch tensors
 
 ## Usage ##
 Running
