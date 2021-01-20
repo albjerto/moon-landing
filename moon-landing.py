@@ -1,7 +1,7 @@
 import argparse
 import torch
 import gym
-from agents import DQNAgent, DoubleDQNAgent, DuelingDQNAgent
+from agents import DQNAgent, FixedDQNAgent, DoubleDQNAgent, DuelingDQNAgent
 from utils import EnvWrapper, set_seed
 import os
 
@@ -9,7 +9,7 @@ import os
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',
-                        choices=['dqn', 'double_dqn', 'dueling_dqn'],
+                        choices=['dqn', 'fixed_dqn', 'double_dqn', 'dueling_dqn'],
                         default='dqn',
                         type=str,
                         help='Model to be used. One between dqn, double_dqn and dueling_dqn (default: dqn)')
@@ -76,7 +76,6 @@ def main():
                         default=0.99,
                         help='Espilon decay rule for power decay (default: 0.99)')
 
-
     args = parser.parse_args()
     hyper_params = {
         'model': args.model,
@@ -130,7 +129,6 @@ def main():
                          hyper_params['min_eps'],
                          hyper_params['decay_rate'],
                          device,
-                         hyper_params['target_sync_freq'],
                          decay_type=hyper_params['decay_type'])
 
     elif args.model == "double_dqn":
