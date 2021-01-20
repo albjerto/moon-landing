@@ -5,13 +5,11 @@ held by Prof. [Mirco Musolesi](https://www.mircomusolesi.org/) at the University
 ![agent perfomance after training](./img/test_performance.gif "Agent performance after training")
 
 ## Dependencies ##
-
-- Python 3.6+
-- PyTorch
-- OpenAI gym
-- NumPy 
-- Matplotlib
-- Box2d
+- [PyTorch](https://pytorch.org/)
+- [OpenAI gym](https://gym.openai.com/)
+- [NumPy](https://numpy.org/) 
+- [Matplotlib](https://matplotlib.org/)
+- [Box2d](https://box2d.org/)
 
 ## Installation ##
 To install this project, run 
@@ -43,12 +41,11 @@ This file contains the main function, which creates the agents and launches them
 ### Agents ###
 The agents are implemented in the `agents.py` file. The available agents are:
 - DQNAgent
+- FixedDQNAgent
 - DoubleDQNAgent
 - DuelingDQNAgent
 
-All the agents implement a `BaseAgent`, which contains the basic functions common to all of them. DoubleDQNAgent also extends DQNAgent.
-
-Note that the DQNAgent implements the DQN algorithm with a different neural network, called _target network_, for the computation of the Q targets in the Q-learning update, as seen in the paper "Human Level Control Through Deep Reinforcement Learning".
+All the agents implement a `BaseAgent`, which contains the basic functions common to all of them. DoubleDQNAgent extends FixedDQNAgent.
 
 ### Models ###
 The available models are implemented in the `models.py`:
@@ -67,18 +64,19 @@ python3 moon-landing.py -h
 ```
 displays a help message with all the customizable parameters and their syntax. 
 ```
-usage: moon-landing.py [-h] [--model {dqn,double_dqn,dueling_dqn}] (-t | -f FILE) [-v {0,1,2,3}] [-b BATCH_SIZE] [-m MEMORY_SIZE] [--gamma GAMMA] [--lr LR] [--episodes EPISODES]
+usage: moon-landing.py [-h] [--model {dqn,fixed_dqn,double_dqn,dueling_dqn}] (-t | -f FILE) [-v {0,1,2,3}] [-r] [-b BATCH_SIZE] [-m MEMORY_SIZE] [--gamma GAMMA] [--lr LR] [--episodes EPISODES]
                        [--target-sync-freq TARGET_SYNC_FREQ] [--learn-freq LEARN_FREQ] [--decay DECAY]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --model {dqn,double_dqn,dueling_dqn}
+  --model {dqn,fixed_dqn,double_dqn,dueling_dqn}
                         Model to be used. One between dqn, double_dqn and dueling_dqn (default: dqn)
   -t, --train           if present, train the chosen agent; if not, test it
-  -f FILE, --file FILE  use the weights stored in the given file. Required if in testing mode
+  -f FILE, --file FILE  Use the weights stored in the given file. Required if in testing mode
   -v {0,1,2,3}, --verbose {0,1,2,3}
                         Verbose mode. One between 0 (no plots, no logs, no video), 1 (yes plots, no logs, no video), 2 (yes plots, yes logs, no video), 3 (yes to all). Considered only in training mode
                         (default: 2)
+  -r, --render          Render video of the environment. Considered only in test mode
   -b BATCH_SIZE, --batch_size BATCH_SIZE
                         size of the batch used to perform training (default: 64)
   -m MEMORY_SIZE, --memory-size MEMORY_SIZE
@@ -87,7 +85,7 @@ optional arguments:
   --lr LR               learning rate (default: 0.001)
   --episodes EPISODES   Number of episodes to perform training on. Considered only if in training mode (default: 2000)
   --target-sync-freq TARGET_SYNC_FREQ
-                        Number of updates before the network is clones for Q-targets (default:500)
+                        Number of updates before the network for Q-targets is clones (default: 500)
   --learn-freq LEARN_FREQ
                         After how many steps the agent should update the weights (default: 4)
   --decay DECAY         Espilon decay rule for power decay (default: 0.99)

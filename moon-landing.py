@@ -9,72 +9,97 @@ import os
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',
-                        choices=['dqn', 'fixed_dqn', 'double_dqn', 'dueling_dqn'],
+                        choices=['dqn',
+                                 'fixed_dqn',
+                                 'double_dqn',
+                                 'dueling_dqn'],
                         default='dqn',
                         type=str,
-                        help='Model to be used. One between dqn, double_dqn and dueling_dqn (default: dqn)')
+                        help='Model to be used.'
+                             ' One between dqn,'
+                             ' double_dqn'
+                             ' and dueling_dqn (default: %(default)s)')
 
     arg_group = parser.add_mutually_exclusive_group(required=True)
     arg_group.add_argument('-t',
                            '--train',
                            action='store_true',
-                           help='if present, train the chosen agent; if not, test it')
+                           help='if present, train the chosen agent;'
+                                ' if not, test it')
     arg_group.add_argument('-f',
                            '--file',
                            type=str,
                            default=None,
-                           help='use the weights stored in the given file. Required if in testing mode')
+                           help='Use the weights stored in the given file.'
+                                ' Required if in testing mode')
 
     parser.add_argument('-v',
                         '--verbose',
                         choices=[0, 1, 2, 3],
                         default=2,
                         type=int,
-                        help="Verbose mode. One between 0 (no plots, no logs, no video), "
-                             "1 (yes plots, no logs, no video), 2 (yes plots, yes logs, no video), "
-                             "3 (yes to all). Considered only in training mode (default: 2)")
+                        help="Verbose mode."
+                             " One between 0 (no plots, no logs, no video), "
+                             " 1 (yes plots, no logs, no video),"
+                             " 2 (yes plots, yes logs, no video), "
+                             " 3 (yes to all)."
+                             " Considered only in training mode (default: %(default)d)")
+
+    parser.add_argument('-r',
+                        '--render',
+                        action='store_true',
+                        help="Render video of the environment."
+                             " Considered only in test mode")
 
     parser.add_argument('-b',
                         '--batch_size',
                         type=int,
                         default=64,
-                        help='size of the batch used to perform training (default: 64)')
+                        help='size of the batch used to perform training'
+                             ' (default: %(default)i)')
 
     parser.add_argument('-m',
                         '--memory-size',
                         type=int,
                         default=int(1e5),
-                        help='maximum size of the replay memory buffer (default: 100000)')
+                        help='maximum size of the replay memory buffer'
+                             ' (default: %(default)i)')
 
     parser.add_argument('--gamma',
                         type=float,
                         default=0.99,
-                        help='discount rate for the q-values update (default: 0.99)')
+                        help='discount rate for the q-values update'
+                             ' (default: %(default)0.2f)')
 
     parser.add_argument('--lr',
                         type=float,
                         default=.001,
-                        help='learning rate (default: 0.001)')
+                        help='learning rate (default: %(default)0.3f)')
 
     parser.add_argument('--episodes',
                         type=int,
                         default=2000,
                         help='Number of episodes to perform training on.'
-                             ' Considered only if in training mode (default: 2000)')
+                             ' Considered only if in training mode'
+                             ' (default: %(default)i)')
 
     parser.add_argument('--target-sync-freq',
                         type=int,
                         default=500,
-                        help='Number of updates before the network is clones for Q-targets (default:500)')
+                        help='Number of updates before the network'
+                             ' for Q-targets is clones (default: %(default)i)')
 
     parser.add_argument('--learn-freq',
                         type=int,
                         default=4,
-                        help='After how many steps the agent should update the weights (default: 4)')
+                        help='After how many steps'
+                             ' the agent should update the weights'
+                             ' (default: %(default)i)')
     parser.add_argument('--decay',
                         type=float,
                         default=0.99,
-                        help='Espilon decay rule for power decay (default: 0.99)')
+                        help='Espilon decay rule for power decay'
+                             ' (default: %(default)0.2f)')
 
     args = parser.parse_args()
     hyper_params = {
@@ -93,7 +118,8 @@ def main():
         'decay_rate': args.decay,
         # 'decay_rate': 0.998,
         'decay_type': 'power_law',
-        'weights_file': args.file
+        'weights_file': args.file,
+        'render': args.render
     }
 
     print("Chosen parameters:\n")
@@ -131,6 +157,20 @@ def main():
                          device,
                          decay_type=hyper_params['decay_type'])
 
+    elif args.model == "fixed_dqn":
+        agent = FixedDQNAgent(env_wrapper.state_dim[0],
+                              env_wrapper.action_dim,
+                              hyper_params['lr'],
+                              hyper_params['gamma'],
+                              hyper_params['memory_size'],
+                              hyper_params['batch_size'],
+                              hyper_params['max_eps'],
+                              hyper_params['min_eps'],
+                              hyper_params['decay_rate'],
+                              device,
+                              hyper_params['target_sync_freq'],
+                              decay_type=hyper_params['decay_type'])
+
     elif args.model == "double_dqn":
         agent = DoubleDQNAgent(env_wrapper.state_dim[0],
                                env_wrapper.action_dim,
@@ -145,7 +185,7 @@ def main():
                                hyper_params['target_sync_freq'],
                                decay_type=hyper_params['decay_type'])
 
-    else :      #  dueling_dqn
+    else:      # dueling_dqn
         agent = DuelingDQNAgent(env_wrapper.state_dim[0],
                                 env_wrapper.action_dim,
                                 hyper_params['lr'],
@@ -172,7 +212,8 @@ def main():
                     learn_every=hyper_params['learn_freq'],
                     verbose=hyper_params['verbose'],
                     avg_period=100,
-                    winning_score=200)
+                    winning_score=200,
+                    plot_freq=200)
     else:
         paths = {
             'weights': hyper_params['weights_file'],
@@ -181,7 +222,7 @@ def main():
 
         agent.test(env_wrapper,
                    paths,
-                   render=True,
+                   hyper_params['render'],
                    num_episodes=100,
                    max_t=1000,
                    winning_score=200)

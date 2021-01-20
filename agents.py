@@ -74,7 +74,7 @@ class BaseAgent:
         return self.curr_eps
 
     def remember(self, s, a, r, s_, d):
-        self.memory.push(Experience(s, a, r, s_, d))
+        self.memory.append(Experience(s, a, r, s_, d))
 
     def can_sample_from_mem(self):
         return self.memory.can_sample(self.batch_size)
@@ -115,24 +115,21 @@ class BaseAgent:
 
             return avg
 
-        fig, (axis1, axis2) = plt.subplots(1, 2, figsize=(18, 5))
-        axis1.clear()
-        axis1.plot(scores, 'blue', label='Score per episode', alpha=0.4)
-        axis1.plot(moving_avg(), 'black',
-                   label='Mean score of the last {} episodes'.format(avg_period))
-        axis1.axhline(winning_score, c='green', label='Winning score', alpha=0.7)
-        axis1.axhline(0, c='grey', ls='--', alpha=0.7)
-        axis1.set_xlabel('Episodes')
-        axis1.set_ylabel('Scores')
-        axis1.legend()
+        fig, axis = plt.subplots()
+        axis.clear()
+        axis.plot(scores, 'blue', label='Score per episode', alpha=0.4)
+        axis.plot(moving_avg(), 'black',
+                  label='Mean score of the last {} episodes'.format(avg_period))
+        axis.axhline(winning_score, c='green', label='Winning score', alpha=0.7)
+        axis.axhline(0, c='grey', ls='--', alpha=0.7)
+        axis.set_xlabel('Episodes')
+        axis.set_ylabel('Scores')
+        axis.legend()
 
         if eps is not None:
-            tw_axis1 = axis1.twinx()
-            tw_axis1.plot(eps, 'red', alpha=0.5)
-            tw_axis1.set_ylabel('Epsilon', color='red')
-
-        axis2.plot(losses)
-        axis2.set_title('Loss')
+            tw_axis = axis.twinx()
+            tw_axis.plot(eps, 'red', alpha=0.5)
+            tw_axis.set_ylabel('Epsilon', color='red')
 
         if filename is not None:
             plt.savefig(filename)
@@ -149,14 +146,15 @@ class BaseAgent:
               learn_every=4,
               verbose=2,
               avg_period=100,
-              winning_score=200):
+              winning_score=200,
+              plot_freq=200):
 
         scores = []
         losses = []
         epsilons = []
         updates = 0
-        plot_freq = 200
         last_mean = 0
+        avg_rewards = []
 
         self.set_train()
 
@@ -197,6 +195,7 @@ class BaseAgent:
                           epsilons)
 
             avg_reward = np.mean(scores[-avg_period:])
+            avg_rewards.append(avg_reward)
             if avg_reward > winning_score and avg_reward > last_mean:
                 last_mean = avg_reward
                 curr_time = datetime.now().strftime("%Y%m%d_%H%M")
@@ -221,6 +220,7 @@ class BaseAgent:
                       winning_score,
                       losses,
                       epsilons)
+        env.close()
 
     def test(self,
              env,
@@ -235,7 +235,7 @@ class BaseAgent:
             print("File not found.")
             exit(1)
 
-        self.set_train()
+        self.set_test()
 
         test_scores = []
         print("TESTING")
@@ -259,11 +259,17 @@ class BaseAgent:
             print("Episode {} - score {}\n".format(episode, score))
 
         if paths['plot_dir'] is not None:
-            curr_time = datetime.now().strftime("%Y%m%d_%H%M")
             plt.axhline(winning_score, c='green', label='Winning score', alpha=0.7)
             plt.plot(test_scores, c='blue', label='Score per episode')
+            curr_time = datetime.now().strftime("%Y%m%d_%H%M")
             plt.savefig(paths['plot_dir'] + self.model_name + '_test_' + curr_time + '.png')
         print("Testing finished.")
+        test_scores = np.array(test_scores)
+        success = test_scores[test_scores >= 200]
+        print("Success rate: {}% - highest score: {}"
+              .format(len(success) * num_episodes / 100, np.max(test_scores)))
+
+        env.close()
 
 
 class DQNAgent(BaseAgent):
@@ -323,10 +329,10 @@ class DQNAgent(BaseAgent):
         return loss.item()
 
     def set_test(self):
-        self.policy_net.test()
+        self.policy_net.eval()
 
     def set_train(self):
-        self.policy_net.eval()
+        self.policy_net.train()
 
     def save(self, filename):
         self.policy_net.save(filename)

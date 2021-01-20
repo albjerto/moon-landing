@@ -17,20 +17,23 @@ def set_seed(seed, env):
 class ReplayMemory:
     def __init__(self, max_length, device):
         self.max_length = max_length
-        self.buffer = []
-        self.times_pushed = 0
+        self.experiences = []
+        self.current_index = 0
         self.device = device
 
-    def push(self, item):
-        if len(self.buffer) < self.max_length:
-            self.buffer.append(item)
+    def append(self, item):
+        if len(self.experiences) < self.max_length:
+            self.experiences.append(item)
         else:
-            self.buffer[self.times_pushed % self.max_length] = item
+            self.experiences[self.current_index % self.max_length] = item
 
-        self.times_pushed += 1
+        self.current_index += 1
 
+    # code snippet taken, with some changes, from the function optimize_model()
+    # https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+    # explanation of the *zip operation: https://stackoverflow.com/a/19343/3343043
     def sample(self, batch_size):
-        batch = Experience(*zip(*random.sample(self.buffer, batch_size)))
+        batch = Experience(*zip(*random.sample(self.experiences, batch_size)))
 
         states = torch.stack(batch.state).to(self.device)
         next_states = torch.stack(batch.new_state).to(self.device)
@@ -40,7 +43,7 @@ class ReplayMemory:
         return states, next_states, actions, rewards, dones
 
     def can_sample(self, batch_size):
-        return len(self.buffer) >= batch_size
+        return len(self.experiences) >= batch_size
 
 
 class EnvWrapper:
