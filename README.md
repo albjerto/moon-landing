@@ -48,7 +48,7 @@ The agents are implemented in the `agents.py` file. The available agents are:
 All the agents implement a `BaseAgent`, which contains the basic functions common to all of them. DoubleDQNAgent extends FixedDQNAgent.
 
 ### Models ###
-The available models are implemented in the `models.py`:
+The available models are implemented in the file `models.py`:
 - DQN
 - Dueling DQN
 
