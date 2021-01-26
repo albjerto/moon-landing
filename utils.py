@@ -12,8 +12,11 @@ def set_seed(seed, env):
     np.random.seed(seed)
     env.seed(seed)
     torch.manual_seed(seed)
+    random.seed(seed)
 
-
+    
+# class taken, with minor changes, from
+# https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html#replay-memory
 class ReplayMemory:
     def __init__(self, max_length, device):
         self.max_length = max_length
