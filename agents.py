@@ -1,13 +1,16 @@
 from abc import abstractmethod
 
-from models import DQN, DuelingDQN
 import torch.optim as optim
 import torch.nn.functional as F
+import torch
 import math
-from utils import *
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+
+from utils.common import Experience
+from utils.replay import ReplayMemory
+from models import DQN, DuelingDQN
 
 
 class BaseAgent:
@@ -104,7 +107,7 @@ class BaseAgent:
         pass
 
     @staticmethod
-    def plot(scores, avg_period, winning_score, losses, eps=None, filename=None):
+    def plot(scores, avg_period, winning_score, eps=None, filename=None):
         def moving_avg():
             avg = []
             for i in range(len(scores)):
@@ -209,7 +212,6 @@ class BaseAgent:
                 self.plot(scores,
                           avg_period,
                           winning_score,
-                          losses,
                           epsilons,
                           filename=paths['plot_dir'] + self.model_name + '_train_' + curr_time + '.png')
 

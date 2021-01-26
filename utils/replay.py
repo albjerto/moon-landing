@@ -1,20 +1,8 @@
-import random
-from collections import namedtuple
 import torch
-import gym
-import numpy as np
-
-Experience = namedtuple('Experience',
-                        ('state', 'action', 'reward', 'new_state', 'done'))
+import random
+from utils.common import Experience
 
 
-def set_seed(seed, env):
-    np.random.seed(seed)
-    env.seed(seed)
-    torch.manual_seed(seed)
-    random.seed(seed)
-
-    
 # class taken, with minor changes, from
 # https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html#replay-memory
 class ReplayMemory:
@@ -47,37 +35,3 @@ class ReplayMemory:
 
     def can_sample(self, batch_size):
         return len(self.experiences) >= batch_size
-
-
-class EnvWrapper:
-    def __init__(self, env, device):
-        self.env = None
-        if type(env) is str:
-            self.env = gym.make(env)
-        else:
-            self.env = env
-
-        self.state = None
-        self.device = device
-        self.unwrapped = env
-        self.state_dim = env.observation_space.shape
-        self.action_dim = env.action_space.n
-
-    def process_state(self, state):
-        return torch.tensor(state, dtype=torch.float, device=self.device)
-
-    def step(self, action):
-        next_state, reward, done, _ = self.env.step(action)
-        next_state = self.process_state(next_state)
-        self.state = next_state
-        return next_state, reward, done
-
-    def reset(self):
-        self.state = self.process_state(self.env.reset())
-        return self.state
-
-    def render(self):
-        self.env.render()
-
-    def close(self):
-        self.env.close()

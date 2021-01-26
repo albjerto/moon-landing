@@ -2,7 +2,8 @@ import argparse
 import torch
 import gym
 from agents import DQNAgent, FixedDQNAgent, DoubleDQNAgent, DuelingDQNAgent
-from utils import EnvWrapper, set_seed
+from utils.common import set_seed
+from utils.wrapper import EnvWrapper
 import os
 
 
