@@ -24,7 +24,7 @@ Alternatively, it is also possible to install the dependencies in a virtual envi
 git clone https://github.com/albjerto/moon-landing
 cd moon-landing
 python3 -m venv .venv
-./Scripts/activate
+.venv/Scripts/activate
 pip3 install -r requirements.txt 
 ```
 
