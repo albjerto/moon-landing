@@ -340,7 +340,7 @@ class DQNAgent(BaseAgent):
         self.policy_net.save(filename)
 
     def load(self, filename):
-        self.policy_net.load(filename)
+        self.policy_net.load(filename, self.device)
 
 
 class FixedDQNAgent(DQNAgent):
@@ -538,7 +538,7 @@ class DuelingDQNAgent(BaseAgent):
         self.policy_net.save(filename)
 
     def load(self, filename):
-        self.policy_net.load(filename)
+        self.policy_net.load(filename, self.device)
 
     def choose_action(self, state, testing=False):
         self.curr_step += 1

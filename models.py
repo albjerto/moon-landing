@@ -19,8 +19,8 @@ class DQN(nn.Module):
     def save(self, filename):
         torch.save(self.state_dict(), filename)
 
-    def load(self, filename):
-        self.load_state_dict(torch.load(filename))
+    def load(self, filename, device):
+        self.load_state_dict(torch.load(filename, map_location=device))
 
 
 class DuelingDQN(nn.Module):
@@ -67,5 +67,5 @@ class DuelingDQN(nn.Module):
     def save(self, filename):
         torch.save(self.state_dict(), filename)
 
-    def load(self, filename):
-        self.load_state_dict(torch.load(filename))
+    def load(self, filename, device):
+        self.load_state_dict(torch.load(filename, map_location=device))
