@@ -23,8 +23,8 @@ Alternatively, it is also possible to install the dependencies in a virtual envi
 ```
 git clone https://github.com/albjerto/moon-landing
 cd moon-landing
-python3 -m venv .venv
-.venv/Scripts/activate
+python3 -m venv ./venv
+./venv/Scripts/activate
 pip3 install -r requirements.txt 
 ```
 
@@ -45,7 +45,7 @@ The agents are implemented in the `agents.py` file. The available agents are:
 - DoubleDQNAgent
 - DuelingDQNAgent
 
-All the agents implement a `BaseAgent`, which contains the basic functions common to all of them. DoubleDQNAgent extends FixedDQNAgent.
+All the agents implement a `BaseAgent`, which contains the basic functions common to all of them. Since many of the improvements are also incremental, `FixedDQNAgent` extends `DQNAgent`, and `DoubleDQNAgent` extends `FixedDQNAgent`.
 
 ### Models ###
 The available models are implemented in the file `models.py`:
@@ -95,7 +95,7 @@ For example, to train a DQN agent, run
 ```
 python3 moon-landing.py -t --model dqn
 ```
-If the agent solves the environment, its weights will be saved as a `.pth` file in the `./solved` folder.
+If the agent solves the environment, the weights that achieved the highest 100-episodes mean will be saved as a `.pth` file in the `./solved` folder, with the name of the model and
 Then, to test it, run
 ```
 python3 moon-landing --model dqn -f ./path/to/file
