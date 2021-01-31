@@ -4,6 +4,9 @@ import torch.nn.functional as F
 
 
 class DQN(nn.Module):
+    """
+    Basic fully-connected neural network.
+    """
     def __init__(self, input_dim, output_dim, linear1_units=64, linear2_units=64):
         super(DQN, self).__init__()
 
@@ -12,18 +15,35 @@ class DQN(nn.Module):
         self.out = nn.Linear(linear2_units, output_dim)
 
     def forward(self, x):
+        """
+        Perform a pass through the network.
+        :param x: current state of the environment
+        :return: predicted q-values for each action
+        """
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
         return self.out(x)
 
     def save(self, filename):
+        """
+        Save the network weights to file.
+        :param filename: path
+        """
         torch.save(self.state_dict(), filename)
 
     def load(self, filename, device):
+        """
+        Loads the network weights from file.
+        :param filename: path of the weight file
+        :param device: CPU or GPU
+        """
         self.load_state_dict(torch.load(filename, map_location=device))
 
 
 class DuelingDQN(nn.Module):
+    """
+    Dueling DQN architecture.
+    """
     def __init__(self, input_dim, output_dim, linear_units=128, advantage_units=128, value_units=128):
         super(DuelingDQN, self).__init__()
 
@@ -58,6 +78,11 @@ class DuelingDQN(nn.Module):
         # )
 
     def forward(self, x):
+        """
+        Perform a pass through the network.
+        :param x: current state of the environment
+        :return: predicted q-values for each action
+        """
         x = self.linear(x)
         advantage = self.advantage(x)
         value = self.value(x)
@@ -65,7 +90,16 @@ class DuelingDQN(nn.Module):
         return value + (advantage - advantage.mean())
 
     def save(self, filename):
+        """
+        Save the network weights to file.
+        :param filename: path
+        """
         torch.save(self.state_dict(), filename)
 
     def load(self, filename, device):
+        """
+        Loads the network weights from file.
+        :param filename: path of the weight file
+        :param device: CPU or GPU
+        """
         self.load_state_dict(torch.load(filename, map_location=device))

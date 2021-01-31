@@ -14,6 +14,9 @@ from models import DQN, DuelingDQN
 
 
 class BaseAgent:
+    """
+    Basic agent abstract class.
+    """
     def __init__(self,
                  max_memory_size,
                  batch_size,
@@ -77,9 +80,20 @@ class BaseAgent:
         return self.curr_eps
 
     def remember(self, s, a, r, s_, d):
+        """
+        Store in replay memory as an Experience tuple.
+        :param s: starting state
+        :param a: action taken while in state s
+        :param r: reward received for action a
+        :param s_: new state of the environment after a
+        :param d: tells if s_ is terminal or not
+        """
         self.memory.append(Experience(s, a, r, s_, d))
 
     def can_sample_from_mem(self):
+        """
+        Check if the Replay Memory has enough samples for a batch.
+        """
         return self.memory.can_sample(self.batch_size)
 
     @abstractmethod
@@ -108,6 +122,14 @@ class BaseAgent:
 
     @staticmethod
     def plot(scores, avg_period, winning_score, eps=None, filename=None):
+        """
+        Plot the current trend of the agent.
+        :param scores: list of total rewards per episode to plot
+        :param avg_period: period of episodes over which to calculate moving avg
+        :param winning_score: threshold for winning one episode
+        :param eps: if specified, plots also the epsilon-value
+        :param filename: if specified, saves the plot at the path given
+        """
         def moving_avg():
             avg = []
             for i in range(len(scores)):
@@ -151,6 +173,23 @@ class BaseAgent:
               avg_period=100,
               winning_score=200,
               plot_freq=200):
+        """
+        Trains the agent. If the environment is solved, the weights
+        corresponding to the highest mean will be saved.
+
+        :param env: environment chosen
+        :param paths: dictionary that contains:
+            - solved_dir: directory in which to save winning weight files
+            - plots_dir: directory in which to save plots
+        :param num_episodes: number of episodes to perform training
+        :param max_t: max timesteps per episode
+        :param learn_every: how often should the networks weight be updated
+        :param verbose: number between 0 and 3, controls how much log info
+            is wanted
+        :param avg_period: period over which compute the avg of the rewards
+        :param winning_score: threshold for winning one episode
+        :param plot_freq: how often should plots be printed
+        """
 
         scores = []
         losses = []
@@ -160,7 +199,7 @@ class BaseAgent:
         avg_rewards = []
 
         self.set_train()
-
+        curr_time = datetime.now().strftime("%Y%m%d_%H%M")
         for ep in range(1, num_episodes + 1):
             state = env.reset()
             score = 0
@@ -191,6 +230,7 @@ class BaseAgent:
                       "****************************\n".format(ep, score, self.curr_eps))
 
             if ep % plot_freq == 0 and verbose > 0:
+                # plotting to see behaviour: not saving to file
                 self.plot(scores,
                           avg_period,
                           winning_score,
@@ -201,14 +241,18 @@ class BaseAgent:
             avg_rewards.append(avg_reward)
             if avg_reward > winning_score and avg_reward > last_mean:
                 last_mean = avg_reward
-                curr_time = datetime.now().strftime("%Y%m%d_%H%M")
                 if verbose > 1:
                     print("\n\nNew best mean: {} at episode {}.\n"
                           .format(avg_reward, ep))
 
                 # self.save(paths['solved_dir'] + self.model_name + '_solved_' + curr_time + '.pth')
-                self.save(paths['solved_dir'] + self.model_name + '_best.pth')
+                self.save(paths['solved_dir']
+                          + self.model_name
+                          + '_'
+                          + curr_time
+                          + '_best.pth')
 
+                # final plot: saving to file
                 self.plot(scores,
                           avg_period,
                           winning_score,
@@ -231,6 +275,17 @@ class BaseAgent:
              num_episodes=100,
              max_t=1000,
              winning_score=200):
+        """
+        Test the agent with the given weights.
+        :param env: environment chosen
+        :param paths: dictionary that contains:
+            - weights: path to the weight file
+            - plots: directory in which to save plots
+        :param render: if True, show the agent playing
+        :param num_episodes: number of episodes to test the agent on
+        :param max_t: max timesteps per episode
+        :param winning_score: threshold score to win an episode
+        """
         try:
             self.load(paths['weights'])
         except FileNotFoundError:
@@ -275,6 +330,9 @@ class BaseAgent:
 
 
 class DQNAgent(BaseAgent):
+    """
+    Agent with a DQN network.
+    """
     def __init__(self,
                  input_dim,
                  output_dim,
@@ -307,6 +365,12 @@ class DQNAgent(BaseAgent):
         self.gamma = gamma
 
     def choose_action(self, state, testing=False):
+        """
+        Choose an action to perform. Uses eps-greedy approach.
+        :param state: current state of the environment
+        :param testing: if True, always choose greedy action
+        :return: the action chosen
+        """
         self.curr_step += 1
 
         if not testing and np.random.random() < self.curr_eps:
@@ -317,6 +381,10 @@ class DQNAgent(BaseAgent):
                 return self.policy_net(state).argmax().item()
 
     def learn(self):
+        """
+        Update the weights of the network.
+        :return: the loss
+        """
         states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
 
         curr_q_vals = self.policy_net(states).gather(1, actions)
@@ -331,19 +399,33 @@ class DQNAgent(BaseAgent):
         return loss.item()
 
     def set_test(self):
+        """ Sets the network in evaluation mode """
         self.policy_net.eval()
 
     def set_train(self):
+        """ Sets the network in training mode """
         self.policy_net.train()
 
     def save(self, filename):
+        """
+        Save the network weights.
+        :param filename: path
+        """
         self.policy_net.save(filename)
 
     def load(self, filename):
+        """
+        Load the network weights.
+        :param filename: path of the weight file
+        """
         self.policy_net.load(filename, self.device)
 
 
 class FixedDQNAgent(DQNAgent):
+    """
+    DQN Agent with a target network to compute Q-targets.
+    Extends DQNAgent.
+    """
     def __init__(self,
                  input_dim,
                  output_dim,
@@ -374,7 +456,7 @@ class FixedDQNAgent(DQNAgent):
                          linear2_units,
                          decay_type)
 
-        self.model_name = "Fixed-DQN"
+        self.model_name = "FixedDQN"
 
         self.target_update_freq = target_update
         # networks
@@ -386,6 +468,12 @@ class FixedDQNAgent(DQNAgent):
         self.updated = 0
 
     def learn(self):
+        """
+        Update the weights of the network, using
+        target_net to compute Q-targets. Every self.target_update_freq
+        updates, clone the policy_net.
+        :return: the loss
+        """
         states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
 
         curr_q_vals = self.policy_net(states).gather(1, actions)
@@ -405,14 +493,14 @@ class FixedDQNAgent(DQNAgent):
         return loss.item()
 
     def target_hard_update(self):
+        """ Clone the policy net weights into the target net """
         self.target_net.load_state_dict(self.policy_net.state_dict())
-
-    def target_soft_update(self, tau=0.001):
-        for target_param, policy_param in zip(self.target_net.parameters(), self.policy_net.parameters()):
-            target_param.data.copy_(tau * policy_param.data + (1.0 - tau) * target_param.data)
 
 
 class DoubleDQNAgent(FixedDQNAgent):
+    """
+    DoubleDQN Agent. Extends FixedDQNAgent.
+    """
     def __init__(self,
                  input_dim,
                  output_dim,
@@ -447,6 +535,12 @@ class DoubleDQNAgent(FixedDQNAgent):
         self.model_name = "DoubleDQN"
 
     def learn(self):
+        """
+        Update the weights of the network, using
+        target_net and policy_net to compute Q-targets.
+        Every self.target_update_freq updates, clone the policy_net.
+        :return: the loss
+        """
         states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
 
         curr_q_vals = self.policy_net(states).gather(1, actions)
@@ -471,6 +565,10 @@ class DoubleDQNAgent(FixedDQNAgent):
 
 
 class DuelingDQNAgent(BaseAgent):
+    """
+    DuelingDQN agent. Extends BaseAgent and uses the
+    dueling architecture for both policy and target networks.
+    """
     def __init__(self,
                  input_dim,
                  output_dim,
@@ -512,6 +610,12 @@ class DuelingDQNAgent(BaseAgent):
         self.target_update_freq = target_update
 
     def learn(self):
+        """
+        Update the weights of the network, using
+        target_net and policy_net to compute Q-values. Every self.target_update_freq
+        updates, clone the policy_net.
+        :return: the loss
+        """
         states, next_states, actions, rewards, dones = self.memory.sample(self.batch_size)
 
         curr_q_vals = self.policy_net(states).gather(1, actions)
@@ -535,12 +639,26 @@ class DuelingDQNAgent(BaseAgent):
         return loss.item()
 
     def save(self, filename):
+        """
+        Save policy network weights to file.
+        :param filename: path
+        """
         self.policy_net.save(filename)
 
     def load(self, filename):
+        """
+        Load network weights from file.
+        :param filename: path of the weight file
+        """
         self.policy_net.load(filename, self.device)
 
     def choose_action(self, state, testing=False):
+        """
+        Chooses an action. Uses eps-greedy approach.
+        :param state: current state of the environment
+        :param testing: if True, always choose greedy action
+        :return: the action chosen
+        """
         self.curr_step += 1
         if not testing and np.random.random() < self.curr_eps:
             return np.random.randint(0, self.output_dim)
@@ -549,10 +667,13 @@ class DuelingDQNAgent(BaseAgent):
                 return self.policy_net(state).argmax().item()
 
     def set_train(self):
+        """ Set the network in training mode """
         self.policy_net.train()
 
     def set_test(self):
+        """ Set the network in evaluation mode """
         self.policy_net.eval()
 
     def target_hard_update(self):
+        """ Clone the policy net weights into the target net """
         self.target_net.load_state_dict(self.policy_net.state_dict())
