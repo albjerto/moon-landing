@@ -234,7 +234,6 @@ class BaseAgent:
                 self.plot(scores,
                           avg_period,
                           winning_score,
-                          losses,
                           epsilons)
 
             avg_reward = np.mean(scores[-avg_period:])
@@ -264,7 +263,6 @@ class BaseAgent:
             self.plot(scores,
                       avg_period,
                       winning_score,
-                      losses,
                       epsilons)
         env.close()
 

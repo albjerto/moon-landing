@@ -54,7 +54,7 @@ The available models are implemented in the file `models.py`:
 
 ### utils.py ###
 This file contains utility functions and classes:
-- Replay Memory, used to store experiences of the form `e = (state, action, reward, new_state, done)`
+- Replay Memory, used to store experiences in the form `e = (state, action, reward, new_state, done)`
 - Environment Wrapper, which handles the conversions between numpy arrays and torch tensors
 
 ## Usage ##
@@ -95,9 +95,9 @@ For example, to train a DQN agent, run
 ```
 python3 moon-landing.py -t --model dqn
 ```
-If the agent solves the environment, the weights that achieved the highest 100-episodes mean will be saved as a `.pth` file in the `./solved` folder, with the name of the model and
+If the agent solves the environment, the weights that achieved the highest 100-episodes mean will be saved as a `.pth` file in the `./solved` folder, with the name of the model and a timestamp with the format `YYYYmmdd_HHMM`.
 Then, to test it, run
 ```
-python3 moon-landing --model dqn -f ./path/to/file
+python3 moon-landing.py --model dqn -f ./path/to/file
 ```
 In the folder `./solved` there are the weight files of some pre-trained agents.
