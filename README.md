@@ -1,4 +1,4 @@
-# Landing on the moon with Deep Reinforcement Learning #
+# Landing on the moon with Deep Q-Learning #
 This repository contains the code of the project for the module Autonomous and Adaptive Systems,
 held by Prof. [Mirco Musolesi](https://www.mircomusolesi.org/) at the University of Bologna.
 
