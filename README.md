@@ -2,6 +2,8 @@
 This repository contains the code of the project for the module Autonomous and Adaptive Systems,
 held by Prof. [Mirco Musolesi](https://www.mircomusolesi.org/) at the University of Bologna.
 
+The purpose of this project is to compare, both in terms of training stability and testing performances, one of the most well-known algorithms for Deep Reinforcement Learning, Deep Q-Learning, and its improvements. In particular, the experiments will train the base DQN, the DQN with fixed Q-targets, the Double DQN and the Dueling Double DQN, and test them on the Lunar Lander environment from OpenAI gym. The results of the experiments show that, while the extensions to the base algorithm improved its performances greatly, the simpleness of the environment prevents us from identifying a clear winner.
+
 Read the paper-like report for the project [here](https://github.com/albjerto/moon-landing/blob/master/minipaper.pdf).
 
 ![agent perfomance after training](./img/test_performance.gif "Agent performance after training")
