@@ -2,7 +2,7 @@
 This repository contains the code of the project for the module Autonomous and Adaptive Systems,
 held by Prof. [Mirco Musolesi](https://www.mircomusolesi.org/) at the University of Bologna.
 
-Read the paper-like report for the project [here](https://github.com/albjerto/moon-landing/minipaper.pdf).
+Read the paper-like report for the project [here](https://github.com/albjerto/moon-landing/blob/master/minipaper.pdf).
 
 ![agent perfomance after training](./img/test_performance.gif "Agent performance after training")
 
